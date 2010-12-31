@@ -13,6 +13,11 @@
 static CGFloat const kJTextViewPaddingSize = 2.0f;
 
 
+@interface JTextView (PrivateMethods)
+- (NSAttributedString*)attributedStringAfterDataDetectorPass;
+@end
+
+
 @implementation JTextView
 
 
@@ -33,6 +38,7 @@ static CGFloat const kJTextViewPaddingSize = 2.0f;
         _textStore = [[NSMutableAttributedString alloc] init];
 		_textColor = [UIColor blackColor];
 		_editable = NO;
+		_dataDetectorTypes = UIDataDetectorTypeNone;
 		caret = [[JTextCaret alloc] initWithFrame:CGRectZero];
     }
     return self;
@@ -41,8 +47,8 @@ static CGFloat const kJTextViewPaddingSize = 2.0f;
 - (void)dealloc
 {
 	[caret release];
-    [_textStore release];
-    [super dealloc];
+	[_textStore release];
+	[super dealloc];
 }
 
 
@@ -52,13 +58,14 @@ static CGFloat const kJTextViewPaddingSize = 2.0f;
 
 - (BOOL)canBecomeFirstResponder
 {
-    return self.editable;
+	return self.editable;
 }
 
 
 - (void)touchesBegan:(NSSet*)touches withEvent:(UIEvent*)event
 {
-    [self becomeFirstResponder];
+	if(self.editable)
+		[self becomeFirstResponder];
 }
 
 
@@ -126,6 +133,37 @@ static CGFloat const kJTextViewPaddingSize = 2.0f;
 		[self.attributedText deleteCharactersInRange:range];
 		[self setNeedsDisplay];
 	}
+}
+
+
+#pragma mark -
+#pragma mark Utility methods
+
+
+- (NSAttributedString*)attributedStringAfterDataDetectorPass
+{
+	NSError* error = NULL;
+	NSDataDetector* detector = [NSDataDetector dataDetectorWithTypes:self.dataDetectorTypes error:&error];
+	NSString* string = [self.attributedText string];
+	
+	[detector enumerateMatchesInString:string options:0 range:NSRangeMake(0, [string length]) usingBlock:^(NSTextCheckingResult *match, NSMatchingFlags flags, BOOL *stop){
+		NSRange matchRange = [match range];
+		switch([match resultType])
+		{
+			case NSTextCheckingTypeLink:
+				NSURL* url = [match URL];
+				break;
+			case NSTextCheckingTypePhoneNumber:
+				NSString* phoneNumber = [match phoneNumber];
+				break;
+			case NSTextCheckingTypeAddress:
+				NSDictionary* addressComponents = [match addressComponents];
+				break;
+			case NSTextCheckingTypeDate:
+				NSDate* date = [match date];
+				break;
+		}
+	}];
 }
 
 
