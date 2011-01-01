@@ -27,7 +27,7 @@
 }
 
 
-@property (nonatomic, copy) NSMutableAttributedString* attributedText;
+@property (nonatomic, retain) NSMutableAttributedString* attributedText;
 @property (nonatomic, retain) UIColor* textColor;
 @property (nonatomic, retain) UIFont* font;
 @property (nonatomic, getter=isEditable) BOOL editable;

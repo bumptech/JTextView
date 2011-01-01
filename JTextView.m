@@ -42,7 +42,9 @@ static NSString* const kJTextViewDataDetectorAddressKey = @"kJTextViewDataDetect
     if((self = [super initWithFrame:frame]))
     {
  		_textStore = [[NSMutableAttributedString alloc] init];
+		self.backgroundColor = [UIColor whiteColor];
 		_textColor = [UIColor blackColor];
+		_font = [[UIFont systemFontOfSize:16.0f] retain];
 		_editable = NO;
 		_dataDetectorTypes = UIDataDetectorTypeNone;
 		caret = [[JTextCaret alloc] initWithFrame:CGRectZero];
@@ -55,6 +57,7 @@ static NSString* const kJTextViewDataDetectorAddressKey = @"kJTextViewDataDetect
 - (void)dealloc
 {
 	CFRelease(textFrame);
+	[_font release];
 	[caret release];
 	[_textStore release];
 	[super dealloc];
@@ -71,11 +74,13 @@ static NSString* const kJTextViewDataDetectorAddressKey = @"kJTextViewDataDetect
 }
 
 
+/*
 - (void)touchesBegan:(NSSet*)touches withEvent:(UIEvent*)event
 {
 	if(self.editable)
 		[self becomeFirstResponder];
 }
+ */
 
 
 #pragma mark -
@@ -91,9 +96,13 @@ static NSString* const kJTextViewDataDetectorAddressKey = @"kJTextViewDataDetect
 	[self.backgroundColor set];
 	CGContextFillRect(context, rect);
 	
+	NSRange textRange = NSMakeRange(0, self.attributedText.length);
+	
 	CTFontRef font = CTFontCreateWithName((CFStringRef)self.font.fontName, self.font.pointSize, NULL);
-	[self.attributedText addAttribute:(NSString*)kCTFontAttributeName value:(id)font range:NSMakeRange(0, self.attributedText.length)];
+	[self.attributedText addAttribute:(NSString*)kCTFontAttributeName value:(id)font range:textRange];
 	CFRelease(font);
+	
+	[self dataDetectorPassInRange:textRange];
 	
 	CGFloat width = CGRectGetWidth(self.bounds) - kJTextViewPaddingSize * 2;
 	CGSize textSize = [[self.attributedText string] sizeWithFont:self.font
@@ -109,6 +118,7 @@ static NSString* const kJTextViewDataDetectorAddressKey = @"kJTextViewDataDetect
 	textFrame = CTFramesetterCreateFrame(framesetter, CFRangeMake(0, 0), path.CGPath, NULL);
 	CFRelease(framesetter);
 	CTFrameDraw(textFrame, context);
+	UIGraphicsPushContext(context);
 }
 
 
@@ -161,26 +171,34 @@ static NSString* const kJTextViewDataDetectorAddressKey = @"kJTextViewDataDetect
 		if([match resultType] != NSTextCheckingTypeDate)
 		{
 			[self.attributedText addAttribute:(NSString*)kCTForegroundColorAttributeName value:(id)[UIColor blueColor].CGColor range:matchRange];
-			[self.attributedText addAttribute:(NSString*)kCTUnderlineStyleAttributeName value:(id)kCTUnderlineStyleSingle range:matchRange];
+			[self.attributedText addAttribute:(NSString*)kCTUnderlineStyleAttributeName value:[NSNumber numberWithInt:kCTUnderlineStyleSingle] range:matchRange];
 		}
 		switch([match resultType])
 		{
 			case NSTextCheckingTypeLink:
+			{
 				NSURL* url = [match URL];
 				[self.attributedText addAttribute:kJTextViewDataDetectorLinkKey value:url range:matchRange];
 				break;
+			}
 			case NSTextCheckingTypePhoneNumber:
+			{
 				NSString* phoneNumber = [match phoneNumber];
 				[self.attributedText addAttribute:kJTextViewDataDetectorPhoneNumberKey value:phoneNumber range:matchRange];
 				break;
+			}
 			case NSTextCheckingTypeAddress:
+			{
 				NSDictionary* addressComponents = [match addressComponents];
 				[self.attributedText addAttribute:kJTextViewDataDetectorAddressKey value:addressComponents range:matchRange];
 				break;
+			}
 			case NSTextCheckingTypeDate:
+			{
 				//NSDate* date = [match date];
 				//[self.attributedText addAttribute:kJTextViewDataDetectorDateKey value:date range:matchRange];
 				break;
+			}
 		}
 	}];
 }
@@ -193,18 +211,24 @@ static NSString* const kJTextViewDataDetectorAddressKey = @"kJTextViewDataDetect
 - (void)receivedTap:(UITapGestureRecognizer*)recognizer
 {
 	CGPoint point = [recognizer locationInView:self];
+	NSLog(@"point = %@", NSStringFromCGPoint(point));
 	CGContextRef context = UIGraphicsGetCurrentContext();
+	
 	CFArrayRef lines = CTFrameGetLines(textFrame);
-	CTIndex lineCount = CFArrayGetCount(lines);
+	CFIndex lineCount = CFArrayGetCount(lines);
 	CGPoint origins[lineCount];
 
 	CTFrameGetLineOrigins(textFrame, CFRangeMake(0, 0), origins);
 	for(CFIndex idx = 0; idx < lineCount; idx++)
 	{
 		CTLineRef line = CFArrayGetValueAtIndex(lines, idx);
-                CGRect lineBounds = CTLineGetImageBounds(line, context);
-                lineBounds.origin.y += origins[idx].y;
+		CGRect lineBounds = CTLineGetImageBounds(line, context);
+		NSLog(@"origins[idx].y = %f", origins[idx].y);
+		lineBounds.origin.y += origins[idx].y;
+		lineBounds.origin.y = -lineBounds.origin.y;
+		lineBounds = CGRectStandardize(lineBounds);
 		
+		NSLog(@"lineBounds = %@", NSStringFromCGRect(lineBounds));
 		if(CGRectContainsPoint(lineBounds, point))
 		{
 			CFArrayRef runs = CTLineGetGlyphRuns(line);
@@ -214,16 +238,22 @@ static NSString* const kJTextViewDataDetectorAddressKey = @"kJTextViewDataDetect
 				NSDictionary* attributes = (NSDictionary*)CTRunGetAttributes(run);
 				BOOL result = NO;
 				NSURL* url = [attributes objectForKey:kJTextViewDataDetectorLinkKey];
+				NSString* phoneNumber = [attributes objectForKey:kJTextViewDataDetectorPhoneNumberKey];
+				NSDictionary* addressComponents = [attributes objectForKey:kJTextViewDataDetectorPhoneNumberKey];
+				//NSDate* date = [attributes objectForKey:kJTextViewDataDetectorDateKey];
+				NSLog(@"***\nurl = %@\nphoneNumber = %@\naddressComponents = %@\n***", url, phoneNumber, addressComponents);
 				if(url)
 				{
 					result = [[UIApplication sharedApplication] openURL:url];
+					return;
 				}
-				else if((NSString* phoneNumber = [attributes objectForKey:kJTextViewDataDetectorPhoneNumberKey]))
+				else if(phoneNumber)
 				{
 					NSURL* url = [NSURL URLWithString:[NSString stringWithFormat:@"tel://%@", phoneNumber]];
 					result = [[UIApplication sharedApplication] openURL:url];
+					return;
 				}
-				else if((NSDictionary* addressComponents = [attributes objectForKey:kJTextViewDataDetectorAddressKey]))
+				else if(addressComponents)
 				{
 					NSMutableString* address = [NSMutableString string];
 					NSString* temp = nil;
@@ -237,14 +267,16 @@ static NSString* const kJTextViewDataDetectorAddressKey = @"kJTextViewDataDetect
 						[address appendString:[NSString stringWithFormat:@" %@", temp]];
 					if((temp = [addressComponents objectForKey:NSTextCheckingCountryKey]))
 						[address appendString:[NSString stringWithFormat:@"%@%@", ([address length] > 0) ? @", " : @"", temp]];
-					address = [address stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
-					NSString* urlString = [NSString stringWithFormat:@"http://maps.google.com/maps?q=%@", address];
+					NSString* urlString = [NSString stringWithFormat:@"http://maps.google.com/maps?q=%@", [address stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
 					result = [[UIApplication sharedApplication] openURL:[NSURL URLWithString:urlString]];
+					return;
 				}
 				//else if((NSDate* date = [attributes objectForKey:kJTextViewDataDetectorDateKey]))
 				//{
 				//	NSLog(@"Unable to handle date: %@", date);
 				//	result = NO;
+				//	UIGraphicsPopContext();
+				//	return;
 				//}
 			}
 		}
