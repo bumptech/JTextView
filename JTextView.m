@@ -65,22 +65,13 @@ static NSString* const kJTextViewDataDetectorAddressKey = @"kJTextViewDataDetect
 
 
 #pragma mark -
-#pragma mark Responder chain and touch handling
+#pragma mark Responder chain
 
 
 - (BOOL)canBecomeFirstResponder
 {
 	return self.editable;
 }
-
-
-/*
-- (void)touchesBegan:(NSSet*)touches withEvent:(UIEvent*)event
-{
-	if(self.editable)
-		[self becomeFirstResponder];
-}
- */
 
 
 #pragma mark -
@@ -102,7 +93,8 @@ static NSString* const kJTextViewDataDetectorAddressKey = @"kJTextViewDataDetect
 	[self.attributedText addAttribute:(NSString*)kCTFontAttributeName value:(id)font range:textRange];
 	CFRelease(font);
 	
-	[self dataDetectorPassInRange:textRange];
+	if(!self.editable)
+		[self dataDetectorPassInRange:textRange];
 	
 	CGFloat width = CGRectGetWidth(self.bounds) - kJTextViewPaddingSize * 2;
 	CGSize textSize = [[self.attributedText string] sizeWithFont:self.font
@@ -210,25 +202,29 @@ static NSString* const kJTextViewDataDetectorAddressKey = @"kJTextViewDataDetect
 
 - (void)receivedTap:(UITapGestureRecognizer*)recognizer
 {
+	if(self.editable)
+	{
+		[self becomeFirstResponder];
+		return;
+	}
+	
 	CGPoint point = [recognizer locationInView:self];
-	NSLog(@"point = %@", NSStringFromCGPoint(point));
 	CGContextRef context = UIGraphicsGetCurrentContext();
 	
-	CFArrayRef lines = CTFrameGetLines(textFrame);
-	CFIndex lineCount = CFArrayGetCount(lines);
+	NSArray* tempLines = (NSArray*)CTFrameGetLines(textFrame);
+	CFIndex lineCount = [tempLines count];//CFArrayGetCount(lines);
+	NSMutableArray* lines = [NSMutableArray arrayWithCapacity:lineCount];
+	for(id elem in [tempLines reverseObjectEnumerator])
+		[lines addObject:elem];
 	CGPoint origins[lineCount];
 
 	CTFrameGetLineOrigins(textFrame, CFRangeMake(0, 0), origins);
 	for(CFIndex idx = 0; idx < lineCount; idx++)
 	{
-		CTLineRef line = CFArrayGetValueAtIndex(lines, idx);
+		CTLineRef line = CFArrayGetValueAtIndex((CFArrayRef)lines, idx);
 		CGRect lineBounds = CTLineGetImageBounds(line, context);
-		NSLog(@"origins[idx].y = %f", origins[idx].y);
 		lineBounds.origin.y += origins[idx].y;
-		lineBounds.origin.y = -lineBounds.origin.y;
-		lineBounds = CGRectStandardize(lineBounds);
 		
-		NSLog(@"lineBounds = %@", NSStringFromCGRect(lineBounds));
 		if(CGRectContainsPoint(lineBounds, point))
 		{
 			CFArrayRef runs = CTLineGetGlyphRuns(line);
@@ -239,9 +235,8 @@ static NSString* const kJTextViewDataDetectorAddressKey = @"kJTextViewDataDetect
 				BOOL result = NO;
 				NSURL* url = [attributes objectForKey:kJTextViewDataDetectorLinkKey];
 				NSString* phoneNumber = [attributes objectForKey:kJTextViewDataDetectorPhoneNumberKey];
-				NSDictionary* addressComponents = [attributes objectForKey:kJTextViewDataDetectorPhoneNumberKey];
+				NSDictionary* addressComponents = [attributes objectForKey:kJTextViewDataDetectorAddressKey];
 				//NSDate* date = [attributes objectForKey:kJTextViewDataDetectorDateKey];
-				NSLog(@"***\nurl = %@\nphoneNumber = %@\naddressComponents = %@\n***", url, phoneNumber, addressComponents);
 				if(url)
 				{
 					result = [[UIApplication sharedApplication] openURL:url];
@@ -249,6 +244,15 @@ static NSString* const kJTextViewDataDetectorAddressKey = @"kJTextViewDataDetect
 				}
 				else if(phoneNumber)
 				{
+					phoneNumber = [phoneNumber stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+					// The following code may be switched to if we absolutely need to remove everything but the numbers.
+					//NSMutableString* strippedPhoneNumber = [NSMutableString stringWithCapacity:[phoneNumber length]]; // Can't be longer than that
+					//for(NSUInteger i = 0; i < [phoneNumber length]; i++)
+					//{
+					//	if(isdigit([phoneNumber characterAtIndex:i]))
+					//		[strippedPhoneNumber appendFormat:@"%c", [phoneNumber characterAtIndex:i]];
+					//}
+					//NSLog(@"*** phoneNumber = %@; strippedPhoneNumber = %@", phoneNumber, strippedPhoneNumber);
 					NSURL* url = [NSURL URLWithString:[NSString stringWithFormat:@"tel://%@", phoneNumber]];
 					result = [[UIApplication sharedApplication] openURL:url];
 					return;
@@ -275,7 +279,6 @@ static NSString* const kJTextViewDataDetectorAddressKey = @"kJTextViewDataDetect
 				//{
 				//	NSLog(@"Unable to handle date: %@", date);
 				//	result = NO;
-				//	UIGraphicsPopContext();
 				//	return;
 				//}
 			}
