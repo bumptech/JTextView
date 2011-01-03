@@ -301,5 +301,15 @@ static CGFloat const kJTextViewPaddingSize = 2.0f;
 	}
 }
 
+- (void)setText:(NSString*) newText;
+{
+	NSAttributedString *attribString = [[NSAttributedString alloc] initWithString:newText];
+	[_textStore setAttributedString:attribString];
+	[attribString release];
+}
+- (NSString*)text;
+{
+	return [_textStore string];
+}
 
 @end
