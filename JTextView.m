@@ -152,6 +152,9 @@ static NSString* const kJTextViewDataDetectorAddressKey = @"kJTextViewDataDetect
 
 - (void)dataDetectorPassInRange:(NSRange)range
 {
+	if (!self.dataDetectorTypes) {
+		return;
+	}
 	NSError* error = NULL;
 	NSDataDetector* detector = [NSDataDetector dataDetectorWithTypes:self.dataDetectorTypes error:&error];
 	NSAssert(error == nil, @"Problem creating the link detector: %@", [error localizedDescription]);
