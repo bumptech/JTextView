@@ -10,6 +10,16 @@
 #import <CoreText/CoreText.h>
 #import "JTextCaret.h"
 
+static NSString* const kJTextViewDataDetectorLinkKey = @"kJTextViewDataDetectorLinkKey";
+static NSString* const kJTextViewDataDetectorPhoneNumberKey = @"kJTextViewDataDetectorPhoneNumberKey";
+static NSString* const kJTextViewDataDetectorDateKey = @"kJTextViewDataDetectorDateKey";
+static NSString* const kJTextViewDataDetectorAddressKey = @"kJTextViewDataDetectorAddressKey";
+
+@protocol JTextViewDataDetectorDelegate <NSObject>
+@optional
+- (void) linkClicked:(id) data ofType:(NSString*)linkType;
+@end
+
 
 @interface JTextView : UIScrollView <UIKeyInput>
 {
@@ -24,9 +34,11 @@
 @private
 	JTextCaret* caret;
 	CTFrameRef textFrame;
+	id<JTextViewDataDetectorDelegate> _dataDelegate;
 }
 
 
+@property (nonatomic, assign) id<JTextViewDataDetectorDelegate> dataDelegate;
 @property (nonatomic, retain) NSMutableAttributedString* attributedText;
 @property (nonatomic, retain) UIColor* textColor;
 @property (nonatomic, retain) UIFont* font;

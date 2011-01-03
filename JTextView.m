@@ -235,51 +235,67 @@ static CGFloat const kJTextViewPaddingSize = 2.0f;
 				NSURL* url = [attributes objectForKey:kJTextViewDataDetectorLinkKey];
 				NSString* phoneNumber = [attributes objectForKey:kJTextViewDataDetectorPhoneNumberKey];
 				NSDictionary* addressComponents = [attributes objectForKey:kJTextViewDataDetectorAddressKey];
-				//NSDate* date = [attributes objectForKey:kJTextViewDataDetectorDateKey];
+				NSDate* date = [attributes objectForKey:kJTextViewDataDetectorDateKey];
 				if(url)
 				{
-					result = [[UIApplication sharedApplication] openURL:url];
+					if ([_dataDelegate respondsToSelector:@selector(linkClicked:ofType:)]) {
+						[_dataDelegate linkClicked:url ofType:kJTextViewDataDetectorLinkKey];
+					} else {
+						result = [[UIApplication sharedApplication] openURL:url];
+					}
 					return;
 				}
 				else if(phoneNumber)
 				{
-					phoneNumber = [phoneNumber stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
-					// The following code may be switched to if we absolutely need to remove everything but the numbers.
-					//NSMutableString* strippedPhoneNumber = [NSMutableString stringWithCapacity:[phoneNumber length]]; // Can't be longer than that
-					//for(NSUInteger i = 0; i < [phoneNumber length]; i++)
-					//{
-					//	if(isdigit([phoneNumber characterAtIndex:i]))
-					//		[strippedPhoneNumber appendFormat:@"%c", [phoneNumber characterAtIndex:i]];
-					//}
-					//NSLog(@"*** phoneNumber = %@; strippedPhoneNumber = %@", phoneNumber, strippedPhoneNumber);
-					NSURL* url = [NSURL URLWithString:[NSString stringWithFormat:@"tel://%@", phoneNumber]];
-					result = [[UIApplication sharedApplication] openURL:url];
+					
+					if ([_dataDelegate respondsToSelector:@selector(linkClicked:ofType:)]) {
+						[_dataDelegate linkClicked:phoneNumber ofType:kJTextViewDataDetectorPhoneNumberKey];
+					} else {
+						phoneNumber = [phoneNumber stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+						// The following code may be switched to if we absolutely need to remove everything but the numbers.
+						//NSMutableString* strippedPhoneNumber = [NSMutableString stringWithCapacity:[phoneNumber length]]; // Can't be longer than that
+						//for(NSUInteger i = 0; i < [phoneNumber length]; i++)
+						//{
+						//	if(isdigit([phoneNumber characterAtIndex:i]))
+						//		[strippedPhoneNumber appendFormat:@"%c", [phoneNumber characterAtIndex:i]];
+						//}
+						//NSLog(@"*** phoneNumber = %@; strippedPhoneNumber = %@", phoneNumber, strippedPhoneNumber);
+						NSURL* url = [NSURL URLWithString:[NSString stringWithFormat:@"tel://%@", phoneNumber]];
+						result = [[UIApplication sharedApplication] openURL:url];
+					}
 					return;
 				}
 				else if(addressComponents)
 				{
-					NSMutableString* address = [NSMutableString string];
-					NSString* temp = nil;
-					if((temp = [addressComponents objectForKey:NSTextCheckingStreetKey]))
-						[address appendString:temp];
-					if((temp = [addressComponents objectForKey:NSTextCheckingCityKey]))
-						[address appendString:[NSString stringWithFormat:@"%@%@", ([address length] > 0) ? @", " : @"", temp]];
-					if((temp = [addressComponents objectForKey:NSTextCheckingStateKey]))
-						[address appendString:[NSString stringWithFormat:@"%@%@", ([address length] > 0) ? @", " : @"", temp]];
-					if((temp = [addressComponents objectForKey:NSTextCheckingZIPKey]))
-						[address appendString:[NSString stringWithFormat:@" %@", temp]];
-					if((temp = [addressComponents objectForKey:NSTextCheckingCountryKey]))
-						[address appendString:[NSString stringWithFormat:@"%@%@", ([address length] > 0) ? @", " : @"", temp]];
-					NSString* urlString = [NSString stringWithFormat:@"http://maps.google.com/maps?q=%@", [address stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
-					result = [[UIApplication sharedApplication] openURL:[NSURL URLWithString:urlString]];
+					if ([_dataDelegate respondsToSelector:@selector(linkClicked:ofType:)]) {
+						[_dataDelegate linkClicked:addressComponents ofType:kJTextViewDataDetectorAddressKey];
+					} else {
+						NSMutableString* address = [NSMutableString string];
+						NSString* temp = nil;
+						if((temp = [addressComponents objectForKey:NSTextCheckingStreetKey]))
+							[address appendString:temp];
+						if((temp = [addressComponents objectForKey:NSTextCheckingCityKey]))
+							[address appendString:[NSString stringWithFormat:@"%@%@", ([address length] > 0) ? @", " : @"", temp]];
+						if((temp = [addressComponents objectForKey:NSTextCheckingStateKey]))
+							[address appendString:[NSString stringWithFormat:@"%@%@", ([address length] > 0) ? @", " : @"", temp]];
+						if((temp = [addressComponents objectForKey:NSTextCheckingZIPKey]))
+							[address appendString:[NSString stringWithFormat:@" %@", temp]];
+						if((temp = [addressComponents objectForKey:NSTextCheckingCountryKey]))
+							[address appendString:[NSString stringWithFormat:@"%@%@", ([address length] > 0) ? @", " : @"", temp]];
+						NSString* urlString = [NSString stringWithFormat:@"http://maps.google.com/maps?q=%@", [address stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+						result = [[UIApplication sharedApplication] openURL:[NSURL URLWithString:urlString]];
+					}
+					return;
+				} else if(date)
+				{
+					if ([_dataDelegate respondsToSelector:@selector(linkClicked:ofType:)]) {
+						[_dataDelegate linkClicked:date ofType:kJTextViewDataDetectorDateKey];
+					} else {						
+						NSLog(@"Unable to handle date: %@", date);
+						result = NO;
+					}
 					return;
 				}
-				//else if((NSDate* date = [attributes objectForKey:kJTextViewDataDetectorDateKey]))
-				//{
-				//	NSLog(@"Unable to handle date: %@", date);
-				//	result = NO;
-				//	return;
-				//}
 			}
 		}
 	}
