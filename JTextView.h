@@ -45,6 +45,7 @@ static NSString* const kJTextViewDataDetectorAddressKey = @"kJTextViewDataDetect
 @property (nonatomic, getter=isEditable) BOOL editable;
 @property (nonatomic) UIDataDetectorTypes dataDetectorTypes;
 
++ (CGFloat)suggestedHeightOfText:(NSString*)text forWidth:(float)maxWidth inFont:(UIFont*)font;
 - (void)setText:(NSString*) newText;
 - (NSString*)text;
 

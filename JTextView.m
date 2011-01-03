@@ -312,4 +312,14 @@ static CGFloat const kJTextViewPaddingSize = 2.0f;
 	return [_textStore string];
 }
 
++ (CGFloat)suggestedHeightOfText:(NSString*)text forWidth:(float)maxWidth inFont:(UIFont*)font;
+{
+	// Accomodate for padding
+	CGFloat width = maxWidth - kJTextViewPaddingSize * 2;
+	CGSize textSize = [text sizeWithFont:font
+					   constrainedToSize:CGSizeMake(width, UINT_MAX)
+						   lineBreakMode:UILineBreakModeWordWrap];
+	return textSize.height;
+}
+
 @end
