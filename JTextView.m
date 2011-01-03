@@ -12,11 +12,6 @@
 
 static CGFloat const kJTextViewPaddingSize = 2.0f;
 
-static NSString* const kJTextViewDataDetectorLinkKey = @"kJTextViewDataDetectorLinkKey";
-static NSString* const kJTextViewDataDetectorPhoneNumberKey = @"kJTextViewDataDetectorPhoneNumberKey";
-static NSString* const kJTextViewDataDetectorDateKey = @"kJTextViewDataDetectorDateKey";
-static NSString* const kJTextViewDataDetectorAddressKey = @"kJTextViewDataDetectorAddressKey";
-
 
 @interface JTextView (PrivateMethods)
 - (void)dataDetectorPassInRange:(NSRange)range;
@@ -27,12 +22,13 @@ static NSString* const kJTextViewDataDetectorAddressKey = @"kJTextViewDataDetect
 @implementation JTextView
 
 
+
 @synthesize attributedText = _textStore;
 @synthesize font = _font;
 @synthesize textColor = _textColor;
 @synthesize editable = _editable;
 @synthesize dataDetectorTypes = _dataDetectorTypes;
-
+@synthesize dataDelegate = _dataDelegate;
 
 #pragma mark -
 #pragma mark Object creation and destruction
@@ -44,7 +40,7 @@ static NSString* const kJTextViewDataDetectorAddressKey = @"kJTextViewDataDetect
  		_textStore = [[NSMutableAttributedString alloc] init];
 		self.backgroundColor = [UIColor whiteColor];
 		_textColor = [UIColor blackColor];
-		_font = [[UIFont systemFontOfSize:16.0f] retain];
+		_font = [[UIFont systemFontOfSize:[UIFont systemFontSize]] retain];
 		_editable = NO;
 		_dataDetectorTypes = UIDataDetectorTypeNone;
 		caret = [[JTextCaret alloc] initWithFrame:CGRectZero];
